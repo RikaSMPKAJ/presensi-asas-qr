@@ -61,22 +61,8 @@ function apiJSONP(action,params={}){
 }
 
 async function api(action,params={}){
-  const q=new URLSearchParams(Object.assign({api:"1",action,key:API_KEY,_t:Date.now()},params));
-  const target = RAW_API_URL + (RAW_API_URL.includes("?")?"&":"?") + q.toString();
-  const urls=[
-    "https://api.allorigins.win/raw?url="+encodeURIComponent(target),
-    "https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(target)
-  ];
-  let lastErr=null;
-  for(const url of urls){
-    try{
-      const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),30000);
-      const res=await fetch(url,{method:"GET",cache:"no-store",signal:ctrl.signal});
-      clearTimeout(to);
-      if(!res.ok) throw Error("HTTP "+res.status);
-      const data=await res.json();
-      if(data&&data.ok===false) throw Error(data.message||"Permintaan gagal.");
-      return data;
+  return apiJSONP(action,params);
+}
     }catch(e){ lastErr=e; console.warn("proxy gagal, coba berikutnya:",e.message); }
   }
   throw lastErr||Error("Server tidak merespons.");
