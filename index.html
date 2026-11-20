@@ -1,5 +1,8 @@
 <!DOCTYPE html>
-<html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Presensi ASAS Barcode</title>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
@@ -14,117 +17,192 @@ button.secondary{background:#475467}button:disabled{opacity:.55;cursor:not-allow
 .stat div{flex:1;min-width:90px;background:#f2f4f7;border-radius:8px;padding:12px;text-align:center}
 .small{color:#667085;font-size:13px}.hidden{display:none}.school-header{text-align:center}a{color:#175c35;font-weight:bold;overflow-wrap:anywhere}
 @media(max-width:480px){.wrap{padding:8px}.card{padding:13px}h1{font-size:19px}}
-</style></head><body><div class="wrap">
-<div class="card school-header"><h1>Presensi ASAS Barcode</h1><b>SMP KRISTEN ALETHEIA JEMBER</b>
-<div class="small">Tahun Pelajaran 2026–2027</div><button class="secondary" onclick="openQrPrint()">Cetak QR Code Siswa</button></div>
-<div class="card"><h3>Identitas Pelaksanaan</h3><label>Nama Guru Pengawas</label><input id="teacher" placeholder="Masukkan nama guru pengawas">
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card school-header">
+<h1>Presensi ASAS Barcode</h1><b>SMP KRISTEN ALETHEIA JEMBER</b>
+<div class="small">Tahun Pelajaran 2026–2027</div>
+<button class="secondary" onclick="openQrPrint()">Cetak QR Code Siswa</button>
+</div>
+
+<div class="card">
+<h3>Identitas Pelaksanaan</h3>
+<label>Nama Guru Pengawas</label><input id="teacher" placeholder="Masukkan nama guru pengawas">
 <label>Sesi Ujian</label><select id="session"><option value="">-- Memuat sesi ujian --</option></select>
 <button class="secondary" onclick="init(true)">🔄 Muat Ulang Sesi</button>
 <div id="sessionStatus" class="small" style="margin-top:8px">Memuat...</div>
-<button onclick="loadSummary()">Tampilkan Rekap Sesi</button><div id="summary" class="hidden"></div></div>
-<div class="card"><h3>Scan QR Code Siswa</h3><p class="small">Arahkan kamera belakang HP ke QR Code kartu identitas siswa.</p>
+<button onclick="loadSummary()">Tampilkan Rekap Sesi</button><div id="summary" class="hidden"></div>
+</div>
+
+<div class="card">
+<h3>Scan QR Code Siswa</h3><p class="small">Arahkan kamera belakang HP ke QR Code kartu identitas siswa.</p>
 <div id="reader"></div><button id="start" onclick="startScan()">Mulai Scan Kamera</button>
-<button class="secondary" onclick="stopScan()">Hentikan Kamera</button><label>Input Barcode Manual</label>
-<input id="manual" placeholder="Masukkan NIPD / kode barcode"><button class="secondary" onclick="manualScan()">Catat Manual</button>
-<div id="result" class="notice">Menghubungkan ke server presensi...</div><div class="stat" id="stats"></div></div>
-<div class="card"><h3>Input Siswa Tidak Hadir</h3><label>NIPD Siswa</label><input id="absNipd" placeholder="Masukkan NIPD siswa">
+<button class="secondary" onclick="stopScan()">Hentikan Kamera</button>
+<label>Input Barcode Manual</label><input id="manual" placeholder="Masukkan NIPD / kode barcode">
+<button class="secondary" onclick="manualScan()">Catat Manual</button>
+<div id="result" class="notice">Menyiapkan koneksi server presensi...</div><div class="stat" id="stats"></div>
+</div>
+
+<div class="card">
+<h3>Input Siswa Tidak Hadir</h3><label>NIPD Siswa</label><input id="absNipd" placeholder="Masukkan NIPD siswa">
 <label>Status Kehadiran</label><select id="absStatus"><option>IZIN</option><option>SAKIT</option><option value="TANPA KETERANGAN">TANPA KETERANGAN</option></select>
-<button class="secondary" onclick="saveAbsence()">Simpan Status</button></div>
-<div class="card"><h3>Berita Acara &amp; PDF</h3><label>Catatan / Kendala Pelaksanaan</label>
+<button class="secondary" onclick="saveAbsence()">Simpan Status</button>
+</div>
+
+<div class="card">
+<h3>Berita Acara &amp; PDF</h3><label>Catatan / Kendala Pelaksanaan</label>
 <textarea id="notes" rows="4" placeholder="Tuliskan catatan atau kendala pelaksanaan ujian"></textarea>
-<button onclick="makeReport()">Buat Berita Acara PDF</button><div id="pdfResult"></div></div>
-<p class="small">Gunakan halaman HTTPS dan batasi akses scanner kepada petugas berwenang.</p></div>
+<button onclick="makeReport()">Buat Berita Acara PDF</button><div id="pdfResult"></div>
+</div>
+<p class="small">Gunakan halaman HTTPS dan batasi akses scanner kepada petugas berwenang.</p>
+</div>
+
 <script>
 "use strict";
-const RAW_API_URL = "AKfycbykGQnB9S0gfVATZ4ZooCtphqdr49iisojVS6T61rdcLThxbGO3ky1pDGC0Deijjuf9";
-const API_URL="https://api.allorigins.win/raw?url="+encodeURIComponent(RAW_API_URL);
-const API_URL_FALLBACK="https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(RAW_API_URL);
-const API_KEY="SMPKRALETHEIA123456789JEMBERKIDUL_KALIWATES";
-const QR_PRINT_URL="AKfycbykGQnB9S0gfVATZ4ZooCtphqdr49iisojVS6T61rdcLThxbGO3ky1pDGC0Deijjuf9?page=qr";
-let scanner=null,scanning=false,busy=false;
+
+/* URL Web App Google Apps Script harus lengkap dan berakhiran /exec */
+const RAW_API_URL = "https://script.google.com/macros/s/AKfycbykGQnB9S0gfVATZ4ZooCtphqdr49iisojVS6T61rdcLThxbGO3ky1pDGC0Deijjuf9/exec";
+const API_KEY = "SMPKRALETHEIA123456789JEMBERKIDUL_KALIWATES";
+const QR_PRINT_URL = "https://script.google.com/macros/s/AKfycbykGQnB9S0gfVATZ4ZooCtphqdr49iisojVS6T61rdcLThxbGO3ky1pDGC0Deijjuf9/exec?page=qr";
+
+let scanner=null, scanning=false, busy=false, initBusy=false;
 const el=id=>document.getElementById(id);
 function show(msg,type){el("result").className="notice "+(type||"");el("result").textContent=msg;}
-function setSessionStatus(t){const s=el("sessionStatus"); if(s) s.textContent=t;}
+function setSessionStatus(t){const s=el("sessionStatus");if(s)s.textContent=t;}
 
 function apiJSONP(action,params={}){
   return new Promise((resolve,reject)=>{
-    const cb="cb123";
+    const cb="presensi_cb_"+Date.now()+"_"+Math.random().toString(36).slice(2);
     const script=document.createElement("script");
     const q=new URLSearchParams(Object.assign({api:"1",action,key:API_KEY,callback:cb,_t:Date.now()},params));
     let done=false;
-    const timer=setTimeout(()=>finish(Error("Server tidak merespons (JSONP timeout 30 dtk).")),30000);
-    function finish(err,data){if(done)return;done=true;clearTimeout(timer);try{delete window[cb]}catch(e){window[cb]=undefined} script.remove(); if(err)reject(err); else if(data&&data.ok===false)reject(Error(data.message||"Permintaan gagal.")); else resolve(data);}
+    const timer=setTimeout(()=>finish(Error("Server tidak merespons dalam 15 detik. Periksa deployment Apps Script.")),15000);
+    function finish(err,data){
+      if(done)return;done=true;clearTimeout(timer);
+      try{delete window[cb]}catch(e){window[cb]=undefined}
+      script.remove();
+      if(err)reject(err);
+      else if(data&&data.ok===false)reject(Error(data.message||"Permintaan gagal."));
+      else resolve(data);
+    }
     window[cb]=data=>finish(null,data);
-    script.onerror=()=>finish(Error("Tidak dapat menghubungi Apps Script (JSONP). Cek deployment Anyone & URL /exec."));
-    script.src=RAW_API_URL+(RAW_API_URL.includes("?")?"&":"?")+q.toString(); script.async=true; document.head.appendChild(script);
+    script.onerror=()=>finish(Error("Gagal menghubungi Apps Script. Pastikan URL /exec benar dan akses deployment sudah sesuai."));
+    script.src=RAW_API_URL+(RAW_API_URL.includes("?")?"&":"?")+q.toString();
+    script.async=true;
+    document.head.appendChild(script);
   });
 }
+async function api(action,params={}){return apiJSONP(action,params);}
 
-async function api(action,params={}){
-  return apiJSONP(action,params);
-}
-    }catch(e){ lastErr=e; console.warn("proxy gagal, coba berikutnya:",e.message); }
-  }
-  throw lastErr||Error("Server tidak merespons.");
-}
-
-async function init(isRetry){
+async function init(isRetry=false){
+  if(initBusy)return;
+  initBusy=true;
   const sel=el("session");
-  if(isRetry){ sel.innerHTML='<option value="">-- Memuat ulang... --</option>'; }
-  setSessionStatus("Menghubungkan ke Google Sheet...");
-  show("Menghubungkan ke server presensi...","");
-  let lastErr=null;
-  for(let attempt=1; attempt<=3; attempt++){
-    try{
-      const r=await api("getAppData");
-      sel.innerHTML="";
-      const first=document.createElement("option"); first.value=""; first.textContent="-- Pilih sesi ujian --"; sel.appendChild(first);
-      (r.data.sessions||[]).forEach(s=>{const o=document.createElement("option"); o.value=s["ID Sesi"]; o.textContent=[s.Tanggal,s.Kelas,s["Mata Pelajaran"],s["Jam Mulai"]].filter(Boolean).join(" | "); sel.appendChild(o);});
-      if(sel.options.length>1){ show("Data sesi berhasil dimuat. Silakan pilih sesi ujian.","good"); setSessionStatus("✅ "+(sel.options.length-1)+" sesi dimuat. Jika belum muncul, klik Muat Ulang Sesi."); }
-      else { show("Belum ada sesi ujian aktif pada sheet SESI.","bad"); setSessionStatus("⚠️ Sheet SESI kosong / tidak ada sesi aktif."); }
-      return;
-    }catch(e){ lastErr=e; setSessionStatus("Percobaan "+attempt+"/3 gagal: "+e.message+" — mencoba lagi..."); await new Promise(r=>setTimeout(r,1500)); }
-  }
-  sel.innerHTML='<option value="">Gagal memuat sesi - klik Muat Ulang Sesi</option>';
-  show("Gagal memuat data setelah 3x percobaan: "+(lastErr&&lastErr.message)+" | Cek: 1) Deployment Apps Script = Anyone, 2) HP pakai WiFi yang sama dengan laptop, 3) Matikan Data Saver.","bad");
-  setSessionStatus("❌ Gagal: "+(lastErr&&lastErr.message));
+  sel.innerHTML='<option value="">-- Mengambil data sesi... --</option>';
+  setSessionStatus("Menghubungkan ke server...");
+  show("Sedang memuat data sesi ujian...","");
+  try{
+    const r=await api("getAppData");
+    if(!r||!r.data)throw Error("Respons server kosong atau format data tidak sesuai.");
+    const sessions=r.data.sessions||[];
+    sel.innerHTML="";
+    const first=document.createElement("option");
+    first.value="";first.textContent="-- Pilih sesi ujian --";sel.appendChild(first);
+    sessions.forEach(s=>{
+      const o=document.createElement("option");
+      o.value=s["ID Sesi"];
+      o.textContent=[s.Tanggal,s.Kelas,s["Mata Pelajaran"],s["Jam Mulai"]].filter(Boolean).join(" | ");
+      sel.appendChild(o);
+    });
+    if(sessions.length){
+      show("Data sesi berhasil dimuat. Silakan pilih sesi ujian.","good");
+      setSessionStatus("✅ "+sessions.length+" sesi berhasil dimuat.");
+    }else{
+      show("Data sesi kosong. Periksa sheet SESI pada Google Sheets.","bad");
+      setSessionStatus("⚠️ Tidak ada sesi ujian yang dikirim server.");
+    }
+  }catch(e){
+    sel.innerHTML='<option value="">-- Gagal memuat sesi --</option>';
+    show("Gagal memuat sesi: "+(e.message||e),"bad");
+    setSessionStatus("❌ "+(e.message||e)+" Klik Muat Ulang Sesi untuk mencoba lagi.");
+  }finally{initBusy=false;}
 }
+
 function selected(){return el("session").value;}
-async function startScan(){if(!selected()){show("Pilih sesi ujian terlebih dahulu.","bad");return;}if(scanning)return;
- if(!window.isSecureContext){show("Kamera memerlukan halaman HTTPS.","bad");return;}
- if(typeof Html5Qrcode==="undefined"){show("Library scanner belum termuat. Periksa internet lalu muat ulang.","bad");return;}
- el("start").disabled=true;try{scanner=new Html5Qrcode("reader");
- await scanner.start({facingMode:"environment"},{fps:10,qrbox:{width:240,height:240},aspectRatio:1},
- text=>{if(busy)return;busy=true;scanner.pause(true);submitCode(text,true);},()=>{});
- scanning=true;show("Kamera aktif. Arahkan ke QR Code siswa.","");
- }catch(e){scanning=false;show("Kamera gagal dibuka: "+(e.message||e),"bad");}finally{el("start").disabled=false;}}
-async function stopScan(){if(!scanner)return;try{if(scanning)await scanner.stop();scanner.clear();scanning=false;show("Kamera telah dihentikan.","");}
- catch(e){show("Gagal menghentikan kamera: "+(e.message||e),"bad");}}
-async function submitCode(code,fromCamera){try{const r=await api("recordScan",{sessionId:selected(),code,teacher:el("teacher").value.trim()});
- let msg=r.message||"Permintaan selesai.";if(r.student)msg+=" — "+r.student;if(r.time)msg+=" | "+r.time;show(msg,r.ok?"good":"bad");if(r.ok)await loadSummary();
- }catch(e){show(e.message,"bad");}finally{setTimeout(()=>{busy=false;if(fromCamera&&scanner&&scanning){try{scanner.resume();}catch(e){}}},1200);}}
-function manualScan(){const code=el("manual").value.trim();if(!selected()){show("Pilih sesi ujian terlebih dahulu.","bad");return;}
- if(!code){show("Masukkan NIPD atau barcode.","bad");return;}if(busy)return;busy=true;el("manual").value="";submitCode(code,false);}
-async function loadSummary(){if(!selected()){show("Pilih sesi ujian terlebih dahulu.","bad");return;}try{
- const d=(await api("getSessionSummary",{sessionId:selected()})).data,box=el("summary");box.classList.remove("hidden");box.textContent="";
- const stat=document.createElement("div");stat.className="stat";
- [["Total Siswa",d.students],["Hadir",d.hadir],["Belum Tercatat",d.belum.length]].forEach(x=>{
- const b=document.createElement("div"),strong=document.createElement("b");strong.textContent=x[1];b.append(strong,document.createElement("br"),document.createTextNode(x[0]));stat.appendChild(b);});
- box.appendChild(stat);const p=document.createElement("p"),b=document.createElement("b");b.textContent="Siswa belum tercatat:";p.appendChild(b);box.appendChild(p);
- const names=document.createElement("p");names.textContent=d.belum.length?d.belum.map(s=>s.name+" ("+s.nipd+")").join(", "):"Semua siswa sudah tercatat.";box.appendChild(names);
- el("stats").textContent="";[["Hadir",d.hadir],["Belum",d.belum.length]].forEach(x=>{const b=document.createElement("div");b.textContent=x[1]+" "+x[0];el("stats").appendChild(b);});
- }catch(e){show(e.message,"bad");}}
-async function saveAbsence(){const nipd=el("absNipd").value.trim(),status=el("absStatus").value;
- if(!selected()){show("Pilih sesi ujian terlebih dahulu.","bad");return;}if(!nipd){show("Masukkan NIPD siswa.","bad");return;}
- try{const r=await api("updateAbsence",{sessionId:selected(),nipd,status,teacher:el("teacher").value.trim()});
- show(r.message||"Status berhasil disimpan.","good");el("absNipd").value="";await loadSummary();}catch(e){show(e.message,"bad");}}
-async function makeReport(){if(!selected()){show("Pilih sesi ujian terlebih dahulu.","bad");return;}el("pdfResult").textContent="Sedang membuat PDF...";
- try{const r=await api("createBeritaAcara",{sessionId:selected(),teacher:el("teacher").value.trim(),notes:el("notes").value.trim()});
- const box=document.createElement("div");box.className="notice good";box.appendChild(document.createTextNode("Berita acara berhasil dibuat. "));
- const a=document.createElement("a");a.href=r.url;a.target="_blank";a.rel="noopener";a.textContent="Buka / Download PDF";box.appendChild(a);
- const s=r.summary,p=document.createElement("p");p.textContent="Jumlah siswa: "+s.total+" | Hadir: "+s.hadir+" | Izin: "+s.izin+" | Sakit: "+s.sakit+" | Tanpa keterangan: "+s.alfa;
- box.appendChild(p);el("pdfResult").textContent="";el("pdfResult").appendChild(box);
- }catch(e){el("pdfResult").textContent="";show("Gagal membuat PDF: "+e.message,"bad");}}
-function openQrPrint(){if(!QR_PRINT_URL.startsWith("https://")){show("URL cetak QR belum diisi.","bad");return;}window.open(QR_PRINT_URL,"_blank","noopener");}
+async function startScan(){
+  if(!selected()){show("Pilih sesi ujian terlebih dahulu.","bad");return;}
+  if(scanning)return;
+  if(!window.isSecureContext){show("Kamera memerlukan halaman HTTPS.","bad");return;}
+  if(typeof Html5Qrcode==="undefined"){show("Library scanner belum termuat. Periksa internet lalu muat ulang.","bad");return;}
+  el("start").disabled=true;
+  try{
+    scanner=new Html5Qrcode("reader");
+    await scanner.start({facingMode:"environment"},{fps:10,qrbox:{width:240,height:240},aspectRatio:1},
+      text=>{if(busy)return;busy=true;scanner.pause(true);submitCode(text,true);},()=>{});
+    scanning=true;show("Kamera aktif. Arahkan ke QR Code siswa.","");
+  }catch(e){scanning=false;show("Kamera gagal dibuka: "+(e.message||e),"bad");}
+  finally{el("start").disabled=false;}
+}
+async function stopScan(){
+  if(!scanner)return;
+  try{if(scanning)await scanner.stop();scanner.clear();scanning=false;show("Kamera telah dihentikan.","");}
+  catch(e){show("Gagal menghentikan kamera: "+(e.message||e),"bad");}
+}
+async function submitCode(code,fromCamera){
+  try{
+    const r=await api("recordScan",{sessionId:selected(),code,teacher:el("teacher").value.trim()});
+    let msg=r.message||"Permintaan selesai.";if(r.student)msg+=" — "+r.student;if(r.time)msg+=" | "+r.time;
+    show(msg,r.ok?"good":"bad");if(r.ok)await loadSummary();
+  }catch(e){show(e.message,"bad");}
+  finally{setTimeout(()=>{busy=false;if(fromCamera&&scanner&&scanning){try{scanner.resume();}catch(e){}}},1200);}
+}
+function manualScan(){
+  const code=el("manual").value.trim();
+  if(!selected()){show("Pilih sesi ujian terlebih dahulu.","bad");return;}
+  if(!code){show("Masukkan NIPD atau barcode.","bad");return;}
+  if(busy)return;busy=true;el("manual").value="";submitCode(code,false);
+}
+async function loadSummary(){
+  if(!selected()){show("Pilih sesi ujian terlebih dahulu.","bad");return;}
+  try{
+    const d=(await api("getSessionSummary",{sessionId:selected()})).data,box=el("summary");
+    box.classList.remove("hidden");box.textContent="";
+    const stat=document.createElement("div");stat.className="stat";
+    [["Total Siswa",d.students],["Hadir",d.hadir],["Belum Tercatat",d.belum.length]].forEach(x=>{
+      const b=document.createElement("div"),strong=document.createElement("b");strong.textContent=x[1];
+      b.append(strong,document.createElement("br"),document.createTextNode(x[0]));stat.appendChild(b);
+    });
+    box.appendChild(stat);
+    const p=document.createElement("p"),b=document.createElement("b");b.textContent="Siswa belum tercatat:";p.appendChild(b);box.appendChild(p);
+    const names=document.createElement("p");names.textContent=d.belum.length?d.belum.map(s=>s.name+" ("+s.nipd+")").join(", "):"Semua siswa sudah tercatat.";box.appendChild(names);
+    el("stats").textContent="";
+    [["Hadir",d.hadir],["Belum",d.belum.length]].forEach(x=>{const b=document.createElement("div");b.textContent=x[1]+" "+x[0];el("stats").appendChild(b);});
+  }catch(e){show(e.message,"bad");}
+}
+async function saveAbsence(){
+  const nipd=el("absNipd").value.trim(),status=el("absStatus").value;
+  if(!selected()){show("Pilih sesi ujian terlebih dahulu.","bad");return;}
+  if(!nipd){show("Masukkan NIPD siswa.","bad");return;}
+  try{
+    const r=await api("updateAbsence",{sessionId:selected(),nipd,status,teacher:el("teacher").value.trim()});
+    show(r.message||"Status berhasil disimpan.","good");el("absNipd").value="";await loadSummary();
+  }catch(e){show(e.message,"bad");}
+}
+async function makeReport(){
+  if(!selected()){show("Pilih sesi ujian terlebih dahulu.","bad");return;}
+  el("pdfResult").textContent="Sedang membuat PDF...";
+  try{
+    const r=await api("createBeritaAcara",{sessionId:selected(),teacher:el("teacher").value.trim(),notes:el("notes").value.trim()});
+    const box=document.createElement("div");box.className="notice good";box.appendChild(document.createTextNode("Berita acara berhasil dibuat. "));
+    const a=document.createElement("a");a.href=r.url;a.target="_blank";a.rel="noopener";a.textContent="Buka / Download PDF";box.appendChild(a);
+    const s=r.summary,p=document.createElement("p");p.textContent="Jumlah siswa: "+s.total+" | Hadir: "+s.hadir+" | Izin: "+s.izin+" | Sakit: "+s.sakit+" | Tanpa keterangan: "+s.alfa;
+    box.appendChild(p);el("pdfResult").textContent="";el("pdfResult").appendChild(box);
+  }catch(e){el("pdfResult").textContent="";show("Gagal membuat PDF: "+e.message,"bad");}
+}
+function openQrPrint(){window.open(QR_PRINT_URL,"_blank","noopener");}
 init();
-</script></body></html>
+</script>
+</body>
+</html>
