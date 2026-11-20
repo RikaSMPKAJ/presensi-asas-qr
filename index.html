@@ -48,7 +48,7 @@ function setSessionStatus(t){const s=el("sessionStatus"); if(s) s.textContent=t;
 
 function apiJSONP(action,params={}){
   return new Promise((resolve,reject)=>{
-    const cb="presensiCb"+Date.now()+Math.floor(Math.random()*1e6);
+    const cb="cb123";
     const script=document.createElement("script");
     const q=new URLSearchParams(Object.assign({api:"1",action,key:API_KEY,callback:cb,_t:Date.now()},params));
     let done=false;
