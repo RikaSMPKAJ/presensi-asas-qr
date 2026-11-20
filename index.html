@@ -62,7 +62,11 @@ function apiJSONP(action,params={}){
 
 async function api(action,params={}){
   const q=new URLSearchParams(Object.assign({api:"1",action,key:API_KEY,_t:Date.now()},params));
-  const urls=[API_URL+(API_URL.includes("?")?"&":"?")+q.toString(), API_URL_FALLBACK+(API_URL_FALLBACK.includes("?")?"&":"?")+q.toString()];
+  const target = RAW_API_URL + (RAW_API_URL.includes("?")?"&":"?") + q.toString();
+  const urls=[
+    "https://api.allorigins.win/raw?url="+encodeURIComponent(target),
+    "https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(target)
+  ];
   let lastErr=null;
   for(const url of urls){
     try{
