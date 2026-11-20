@@ -19,6 +19,8 @@ button.secondary{background:#475467}button:disabled{opacity:.55;cursor:not-allow
 <div class="small">Tahun Pelajaran 2026–2027</div><button class="secondary" onclick="openQrPrint()">Cetak QR Code Siswa</button></div>
 <div class="card"><h3>Identitas Pelaksanaan</h3><label>Nama Guru Pengawas</label><input id="teacher" placeholder="Masukkan nama guru pengawas">
 <label>Sesi Ujian</label><select id="session"><option value="">-- Memuat sesi ujian --</option></select>
+<button class="secondary" onclick="init(true)">🔄 Muat Ulang Sesi</button>
+<div id="sessionStatus" class="small" style="margin-top:8px">Memuat...</div>
 <button onclick="loadSummary()">Tampilkan Rekap Sesi</button><div id="summary" class="hidden"></div></div>
 <div class="card"><h3>Scan QR Code Siswa</h3><p class="small">Arahkan kamera belakang HP ke QR Code kartu identitas siswa.</p>
 <div id="reader"></div><button id="start" onclick="startScan()">Mulai Scan Kamera</button>
@@ -34,31 +36,70 @@ button.secondary{background:#475467}button:disabled{opacity:.55;cursor:not-allow
 <p class="small">Gunakan halaman HTTPS dan batasi akses scanner kepada petugas berwenang.</p></div>
 <script>
 "use strict";
-/* Isi URL Web App /exec dan API_KEY yang SAMA dengan konfigurasi Kode.gs. */
 const API_URL="https://script.google.com/macros/s/AKfycbyt30zQFiIDwN6wEaIOE8Ob6VfcthetGG7hgyBferZCUTEqfGh1OX3F4j8tawd0vfkW/exec";
 const API_KEY="SMPKRALETHEIA123456789JEMBERKIDUL_KALIWATES";
-const QR_PRINT_URL="https://script.google.com/macros/s/AKfycbyt30zQFiIDwN6wEaIOE8Ob6VfcthetGG7hgyBferZCUTEqfGh1OX3F4j8tawd0vfkW/exec
-?page=qr";
+const QR_PRINT_URL="https://script.google.com/macros/s/AKfycbyt30zQFiIDwN6wEaIOE8Ob6VfcthetGG7hgyBferZCUTEqfGh1OX3F4j8tawd0vfkW/exec?page=qr";
 let scanner=null,scanning=false,busy=false;
 const el=id=>document.getElementById(id);
 function show(msg,type){el("result").className="notice "+(type||"");el("result").textContent=msg;}
-function api(action,params={}){return new Promise((resolve,reject)=>{
- if(!API_URL.startsWith("https://")||API_URL.includes("TEMPEL_URL")){reject(Error("URL Web App Apps Script belum diisi."));return;}
- if(!API_KEY||API_KEY.includes("GANTI_DENGAN")){reject(Error("Kunci API belum diisi."));return;}
- const cb="presensiCb_"+Date.now()+"_"+Math.floor(Math.random()*1e6),script=document.createElement("script");
- const q=new URLSearchParams(Object.assign({api:"1",action,key:API_KEY,callback:cb},params));let done=false;
- const timer=setTimeout(()=>finish(Error("Server tidak merespons. Periksa koneksi dan URL backend.")),20000);
- function finish(err,data){if(done)return;done=true;clearTimeout(timer);try{delete window[cb]}catch(e){window[cb]=undefined}
- script.remove();if(err)reject(err);else if(data&&data.ok===false)reject(Error(data.message||"Permintaan gagal."));else resolve(data);}
- window[cb]=data=>finish(null,data);script.onerror=()=>finish(Error("Tidak dapat menghubungi Apps Script. Periksa URL /exec, deployment Anyone, dan kunci API."));
- script.src=API_URL+(API_URL.includes("?")?"&":"?")+q.toString();script.async=true;document.head.appendChild(script);
-});}
-async function init(){try{const r=await api("getAppData"),sel=el("session");sel.innerHTML="";
- const first=document.createElement("option");first.value="";first.textContent="-- Pilih sesi ujian --";sel.appendChild(first);
- (r.data.sessions||[]).forEach(s=>{const o=document.createElement("option");o.value=s["ID Sesi"];
- o.textContent=[s.Tanggal,s.Kelas,s["Mata Pelajaran"],s["Jam Mulai"]].filter(Boolean).join(" | ");sel.appendChild(o);});
- show(sel.options.length>1?"Data sesi berhasil dimuat. Silakan pilih sesi ujian.":"Belum ada sesi ujian aktif pada sheet SESI.",sel.options.length>1?"":"bad");
- }catch(e){el("session").innerHTML='<option value="">Gagal memuat sesi</option>';show("Gagal memuat data: "+e.message,"bad");}}
+function setSessionStatus(t){const s=el("sessionStatus"); if(s) s.textContent=t;}
+
+function apiJSONP(action,params={}){
+  return new Promise((resolve,reject)=>{
+    const cb="presensiCb_"+Date.now()+"_"+Math.floor(Math.random()*1e6);
+    const script=document.createElement("script");
+    const q=new URLSearchParams(Object.assign({api:"1",action,key:API_KEY,callback:cb,_t:Date.now()},params));
+    let done=false;
+    const timer=setTimeout(()=>finish(Error("Server tidak merespons (JSONP timeout 30 dtk).")),30000);
+    function finish(err,data){if(done)return;done=true;clearTimeout(timer);try{delete window[cb]}catch(e){window[cb]=undefined} script.remove(); if(err)reject(err); else if(data&&data.ok===false)reject(Error(data.message||"Permintaan gagal.")); else resolve(data);}
+    window[cb]=data=>finish(null,data);
+    script.onerror=()=>finish(Error("Tidak dapat menghubungi Apps Script (JSONP). Cek deployment Anyone & URL /exec."));
+    script.src=API_URL+(API_URL.includes("?")?"&":"?")+q.toString(); script.async=true; document.head.appendChild(script);
+  });
+}
+
+async function api(action,params={}){
+  if(!API_URL.startsWith("https://")) throw Error("URL Web App belum diisi.");
+  if(!API_KEY) throw Error("Kunci API belum diisi.");
+  const q=new URLSearchParams(Object.assign({api:"1",action,key:API_KEY,_t:Date.now()},params));
+  const url=API_URL+(API_URL.includes("?")?"&":"?")+q.toString();
+  // 1. Coba fetch dulu - lebih stabil di HP
+  try{
+    const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),30000);
+    const res=await fetch(url,{method:"GET",redirect:"follow",cache:"no-store",signal:ctrl.signal});
+    clearTimeout(to);
+    if(!res.ok) throw Error("HTTP "+res.status);
+    const data=await res.json();
+    if(data&&data.ok===false) throw Error(data.message||"Permintaan gagal.");
+    return data;
+  }catch(fetchErr){
+    // 2. Fallback ke JSONP kalau fetch kena CORS / redirect
+    console.warn("fetch gagal, fallback JSONP:", fetchErr.message);
+    return apiJSONP(action,params);
+  }
+}
+
+async function init(isRetry){
+  const sel=el("session");
+  if(isRetry){ sel.innerHTML='<option value="">-- Memuat ulang... --</option>'; }
+  setSessionStatus("Menghubungkan ke Google Sheet...");
+  show("Menghubungkan ke server presensi...","");
+  let lastErr=null;
+  for(let attempt=1; attempt<=3; attempt++){
+    try{
+      const r=await api("getAppData");
+      sel.innerHTML="";
+      const first=document.createElement("option"); first.value=""; first.textContent="-- Pilih sesi ujian --"; sel.appendChild(first);
+      (r.data.sessions||[]).forEach(s=>{const o=document.createElement("option"); o.value=s["ID Sesi"]; o.textContent=[s.Tanggal,s.Kelas,s["Mata Pelajaran"],s["Jam Mulai"]].filter(Boolean).join(" | "); sel.appendChild(o);});
+      if(sel.options.length>1){ show("Data sesi berhasil dimuat. Silakan pilih sesi ujian.","good"); setSessionStatus("✅ "+(sel.options.length-1)+" sesi dimuat. Jika belum muncul, klik Muat Ulang Sesi."); }
+      else { show("Belum ada sesi ujian aktif pada sheet SESI.","bad"); setSessionStatus("⚠️ Sheet SESI kosong / tidak ada sesi aktif."); }
+      return;
+    }catch(e){ lastErr=e; setSessionStatus("Percobaan "+attempt+"/3 gagal: "+e.message+" — mencoba lagi..."); await new Promise(r=>setTimeout(r,1500)); }
+  }
+  sel.innerHTML='<option value="">Gagal memuat sesi - klik Muat Ulang Sesi</option>';
+  show("Gagal memuat data setelah 3x percobaan: "+(lastErr&&lastErr.message)+" | Cek: 1) Deployment Apps Script = Anyone, 2) HP pakai WiFi yang sama dengan laptop, 3) Matikan Data Saver.","bad");
+  setSessionStatus("❌ Gagal: "+(lastErr&&lastErr.message));
+}
 function selected(){return el("session").value;}
 async function startScan(){if(!selected()){show("Pilih sesi ujian terlebih dahulu.","bad");return;}if(scanning)return;
  if(!window.isSecureContext){show("Kamera memerlukan halaman HTTPS.","bad");return;}
@@ -95,6 +136,6 @@ async function makeReport(){if(!selected()){show("Pilih sesi ujian terlebih dahu
  const s=r.summary,p=document.createElement("p");p.textContent="Jumlah siswa: "+s.total+" | Hadir: "+s.hadir+" | Izin: "+s.izin+" | Sakit: "+s.sakit+" | Tanpa keterangan: "+s.alfa;
  box.appendChild(p);el("pdfResult").textContent="";el("pdfResult").appendChild(box);
  }catch(e){el("pdfResult").textContent="";show("Gagal membuat PDF: "+e.message,"bad");}}
-function openQrPrint(){if(!QR_PRINT_URL.startsWith("https://")||QR_PRINT_URL.includes("TEMPEL_URL")){show("URL cetak QR belum diisi.","bad");return;}window.open(QR_PRINT_URL,"_blank","noopener");}
+function openQrPrint(){if(!QR_PRINT_URL.startsWith("https://")){show("URL cetak QR belum diisi.","bad");return;}window.open(QR_PRINT_URL,"_blank","noopener");}
 init();
 </script></body></html>
