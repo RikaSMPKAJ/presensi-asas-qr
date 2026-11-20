@@ -29,7 +29,19 @@ button.secondary{background:#475467}button:disabled{opacity:.55;cursor:not-allow
 
 <div class="card">
 <h3>Identitas Pelaksanaan</h3>
-<label>Nama Guru Pengawas</label><input id="teacher" placeholder="Masukkan nama guru pengawas">
+<label>Nama Guru Pengawas</label>
+<select id="teacher" required>
+  <option value="">-- Pilih nama guru pengawas --</option>
+  <option value="Tiarma Ida H, S.TP">Tiarma Ida H, S.TP</option>
+  <option value="Sri Suwarni, S.Th">Sri Suwarni, S.Th</option>
+  <option value="Dra. Juli Setyowati, M.P">Dra. Juli Setyowati, M.P</option>
+  <option value="Luzyana A.F, S.Pd">Luzyana A.F, S.Pd</option>
+  <option value="Cornelius Bagus N., S.Th">Cornelius Bagus N., S.Th</option>
+  <option value="Mita Yuni A., S.Si">Mita Yuni A., S.Si</option>
+  <option value="Clarissa Cantika A., S.S">Clarissa Cantika A., S.S</option>
+  <option value="Lifa Karuniawati, S.Kom">Lifa Karuniawati, S.Kom</option>
+  <option value="Alfathius Charol P., S.Pd">Alfathius Charol P., S.Pd</option>
+</select>
 <label>Sesi Ujian</label><select id="session"><option value="">-- Memuat sesi ujian --</option></select>
 <button class="secondary" onclick="init(true)">🔄 Muat Ulang Sesi</button>
 <div id="sessionStatus" class="small" style="margin-top:8px">Memuat...</div>
