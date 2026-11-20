@@ -36,7 +36,9 @@ button.secondary{background:#475467}button:disabled{opacity:.55;cursor:not-allow
 <p class="small">Gunakan halaman HTTPS dan batasi akses scanner kepada petugas berwenang.</p></div>
 <script>
 "use strict";
-const API_URL="https://script.google.com/macros/s/AKfycbyt30zQFiIDwN6wEaIOE8Ob6VfcthetGG7hgyBferZCUTEqfGh1OX3F4j8tawd0vfkW/exec";
+const RAW_API_URL="https://script.google.com/macros/s/AKfycbyt30zQFiIDwN6wEaIOE8Ob6VfcthetGG7hgyBferZCUTEqfGh1OX3F4j8tawd0vfkW/exec";
+const API_URL="https://api.allorigins.win/raw?url="+encodeURIComponent(RAW_API_URL);
+const API_URL_FALLBACK="https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(RAW_API_URL);
 const API_KEY="SMPKRALETHEIA123456789JEMBERKIDUL_KALIWATES";
 const QR_PRINT_URL="https://script.google.com/macros/s/AKfycbyt30zQFiIDwN6wEaIOE8Ob6VfcthetGG7hgyBferZCUTEqfGh1OX3F4j8tawd0vfkW/exec?page=qr";
 let scanner=null,scanning=false,busy=false;
@@ -54,29 +56,26 @@ function apiJSONP(action,params={}){
     function finish(err,data){if(done)return;done=true;clearTimeout(timer);try{delete window[cb]}catch(e){window[cb]=undefined} script.remove(); if(err)reject(err); else if(data&&data.ok===false)reject(Error(data.message||"Permintaan gagal.")); else resolve(data);}
     window[cb]=data=>finish(null,data);
     script.onerror=()=>finish(Error("Tidak dapat menghubungi Apps Script (JSONP). Cek deployment Anyone & URL /exec."));
-    script.src=API_URL+(API_URL.includes("?")?"&":"?")+q.toString(); script.async=true; document.head.appendChild(script);
+    script.src=RAW_API_URL+(RAW_API_URL.includes("?")?"&":"?")+q.toString(); script.async=true; document.head.appendChild(script);
   });
 }
 
 async function api(action,params={}){
-  if(!API_URL.startsWith("https://")) throw Error("URL Web App belum diisi.");
-  if(!API_KEY) throw Error("Kunci API belum diisi.");
   const q=new URLSearchParams(Object.assign({api:"1",action,key:API_KEY,_t:Date.now()},params));
-  const url=API_URL+(API_URL.includes("?")?"&":"?")+q.toString();
-  // 1. Coba fetch dulu - lebih stabil di HP
-  try{
-    const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),30000);
-    const res=await fetch(url,{method:"GET",redirect:"follow",cache:"no-store",signal:ctrl.signal});
-    clearTimeout(to);
-    if(!res.ok) throw Error("HTTP "+res.status);
-    const data=await res.json();
-    if(data&&data.ok===false) throw Error(data.message||"Permintaan gagal.");
-    return data;
-  }catch(fetchErr){
-    // 2. Fallback ke JSONP kalau fetch kena CORS / redirect
-    console.warn("fetch gagal, fallback JSONP:", fetchErr.message);
-    return apiJSONP(action,params);
+  const urls=[API_URL+(API_URL.includes("?")?"&":"?")+q.toString(), API_URL_FALLBACK+(API_URL_FALLBACK.includes("?")?"&":"?")+q.toString()];
+  let lastErr=null;
+  for(const url of urls){
+    try{
+      const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),30000);
+      const res=await fetch(url,{method:"GET",cache:"no-store",signal:ctrl.signal});
+      clearTimeout(to);
+      if(!res.ok) throw Error("HTTP "+res.status);
+      const data=await res.json();
+      if(data&&data.ok===false) throw Error(data.message||"Permintaan gagal.");
+      return data;
+    }catch(e){ lastErr=e; console.warn("proxy gagal, coba berikutnya:",e.message); }
   }
+  throw lastErr||Error("Server tidak merespons.");
 }
 
 async function init(isRetry){
